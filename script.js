@@ -154,20 +154,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Card Size Logic ---
     function initCardSize() {
-        const savedSize = localStorage.getItem('cardMinSize');
+        let savedSize = localStorage.getItem('cardMinSize');
 
-        // Detect Mobile mainly for default
+        // Detect Mobile
         const isMobile = window.innerWidth < 600;
-        const defaultSize = isMobile ? 160 : 280;
 
-        if (savedSize) {
-            board.style.setProperty('--card-min-width', `${savedSize}px`);
-            cardSizeSlider.value = savedSize;
-        } else {
-            // Set default explicit
-            board.style.setProperty('--card-min-width', `${defaultSize}px`);
-            cardSizeSlider.value = defaultSize;
+        // S24 & standard mobile optimization:
+        // Force reset if mobile but size is "desktop-like" (> 180px)
+        // 140px is safe for 2 columns on almost all screens (140+140+10gap+24padding = 314px)
+        if (isMobile) {
+            if (!savedSize || parseInt(savedSize) > 180) {
+                savedSize = 140;
+                localStorage.setItem('cardMinSize', savedSize); // Auto-fix storage
+            }
         }
+
+        const defaultSize = isMobile ? 140 : 280;
+        const finalSize = savedSize ? savedSize : defaultSize;
+
+        board.style.setProperty('--card-min-width', `${finalSize}px`);
+        cardSizeSlider.value = finalSize;
 
         cardSizeSlider.addEventListener('input', (e) => {
             const val = e.target.value;

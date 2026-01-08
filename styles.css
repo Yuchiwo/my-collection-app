@@ -872,20 +872,24 @@ textarea:focus {
 
 @media (max-width: 600px) {
     .app-container {
-        padding: 16px;
+        padding: 12px;
+        /* Reduced from 16px */
     }
 
     .app-header h1 {
-        font-size: 2rem;
+        font-size: 1.8rem;
+        /* Slightly smaller header */
     }
 
     .board-container {
-        gap: 12px;
-        /* Mobile specific adjustments if needed */
+        gap: 10px;
+        /* Reduced from 12px */
+        padding-bottom: 80px;
     }
 
     .collection-card {
-        padding: 12px;
+        padding: 10px;
+        /* Compact padding */
     }
 
     /* Wrap controls */
