@@ -965,5 +965,7 @@ textarea:focus {
 
     .board-container.compact-mode {
         gap: 4px;
+        grid-template-columns: repeat(4, 1fr);
+        /* Force 4 columns */
     }
 }
