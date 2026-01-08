@@ -464,6 +464,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         return {
             getTags: () => tags,
+            addPendingTag: () => {
+                if (input.value.trim()) addTag(input.value);
+            },
             reset: () => {
                 tags = [];
                 renderChips();
@@ -796,6 +799,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
 
         const memo = document.getElementById('memoInput').value;
+        modalTagManager.addPendingTag(); // Capture any text currently in the input
         const tags = modalTagManager.getTags();
         const ratingInputs = document.querySelectorAll('input[name="rating"]');
         let rating = 3;
@@ -872,6 +876,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let isEditing = true;
         const finishEditing = (finalTags) => {
             if (!isEditing) return;
+            tagManager.addPendingTag(); // Capture any text left in input
+            finalTags = tagManager.getTags(); // Refresh tags
             isEditing = false;
             if (card) card.classList.remove('active-editing');
             updateItemTags(id, finalTags);
