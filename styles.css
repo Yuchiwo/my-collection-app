@@ -912,4 +912,25 @@ textarea:focus {
     .filter-bar {
         padding-bottom: 8px;
     }
+
+    /* Mobile Tag Fixes */
+    .card-tags {
+        gap: 4px;
+        /* Tighter gap */
+        min-height: 28px;
+        /* Slightly more compact */
+    }
+
+    .tag-badge {
+        font-size: 0.65rem;
+        /* Smaller text */
+        padding: 2px 6px;
+        /* Tighter padding */
+        max-width: 100%;
+        /* Prevent overflow */
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        /* Handle long tags */
+    }
 }
