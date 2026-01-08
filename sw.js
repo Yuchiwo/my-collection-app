@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ghost-pioneer-v13';
+const CACHE_NAME = 'ghost-pioneer-v14';
 const ASSETS_TO_CACHE = [
     './index.html',
     './styles.css?v=7',
