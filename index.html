@@ -35,18 +35,19 @@
             <h1><span class="highlight">My</span> Collection</h1>
             <p class="subtitle">お気に入りの瞬間やアイテムを、自由にコレクション。</p>
 
-            <div class="controls-bar">
-                <select id="sortSelect">
-                    <option value="custom">✦ 自由に並び替え</option>
-                    <option value="rating-desc">★ 評価が高い順</option>
-                    <option value="rating-asc">★ 評価が低い順</option>
-                    <option value="date-desc">🕒 日付が新しい順</option>
-                    <option value="date-asc">🕒 日付が古い順</option>
-                </select>
-                <div class="slider-container" title="カードのサイズを変更">
-                    <span class="material-icons-round" style="font-size: 1.2rem; opacity: 0.7;">grid_view</span>
-                    <input type="range" id="cardSizeSlider" min="150" max="400" step="10" value="280">
-                </div>
+            <div class="slider-container" title="カードのサイズを変更">
+                <span class="material-icons-round" style="font-size: 1.2rem; opacity: 0.7;">grid_view</span>
+                <input type="range" id="cardSizeSlider" min="150" max="400" step="10" value="280">
+            </div>
+
+            <div class="action-buttons">
+                <button id="backupBtn" class="icon-btn" title="データを保存 (バックアップ)">
+                    <span class="material-icons-round">download</span>
+                </button>
+                <button id="restoreBtn" class="icon-btn" title="データを読み込む (復元)">
+                    <span class="material-icons-round">upload</span>
+                </button>
+                <input type="file" id="restoreInput" accept=".json" style="display: none;">
             </div>
 
             <div id="filterBar" class="filter-bar">

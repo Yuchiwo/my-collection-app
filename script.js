@@ -186,6 +186,88 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     initCardSize();
 
+    // --- Backup & Restore Logic ---
+    const backupBtn = document.getElementById('backupBtn');
+    const restoreBtn = document.getElementById('restoreBtn');
+    const restoreInput = document.getElementById('restoreInput');
+
+    backupBtn.addEventListener('click', async () => {
+        try {
+            const allItems = await db.getAllItems();
+            const order = await db.getOrder();
+            const data = {
+                version: 1,
+                timestamp: new Date().toISOString(),
+                items: allItems,
+                customOrder: order
+            };
+
+            const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `my_collection_backup_${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            alert('バックアップファイルを作成しました。\nGoogleドライブ等に保存すると他の端末で共有できます。');
+        } catch (err) {
+            console.error('Backup failed:', err);
+            alert('バックアップに失敗しました');
+        }
+    });
+
+    restoreBtn.addEventListener('click', () => {
+        restoreInput.click();
+    });
+
+    restoreInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!confirm('現在のデータを上書きして、ファイルを読み込みますか？\n（現在のデータは消えます）')) {
+            this.value = '';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            try {
+                const data = JSON.parse(event.target.result);
+                if (!data.items || !Array.isArray(data.items)) {
+                    throw new Error('Invalid data format');
+                }
+
+                // Clear existing
+                // Since our DBManager doesn't have clearAll, we delete one by one or we should add a clear method?
+                // For now, let's just delete all current items in state to be safe, then verify on reload.
+                // Actually, migration logic handles empty, but we need to actively clear DB.
+                // Let's iterate delete. Performance might be meh but safe.
+                const currentItems = await db.getAllItems();
+                await Promise.all(currentItems.map(item => db.deleteItem(item.id)));
+
+                // Add new items
+                // This might trigger UI updates if we called addItem, but we want bulk insert.
+                // db.saveItem is simpler.
+                await Promise.all(data.items.map(item => db.saveItem(item)));
+
+                if (data.customOrder) {
+                    await db.saveOrder(data.customOrder);
+                }
+
+                alert('データの読み込みが完了しました。\nアプリを再読み込みします。');
+                location.reload();
+
+            } catch (err) {
+                console.error('Restore failed:', err);
+                alert('ファイルの読み込みに失敗しました。\n正しいバックアップファイルか確認してください。');
+            }
+        };
+        reader.readAsText(file);
+    });
+
     // --- App Initialization & Migration ---
     async function initApp() {
         try {
