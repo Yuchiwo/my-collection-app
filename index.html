@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Collection Board</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&family=Outfit:wght@400;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <!-- Google Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful');
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    </script>
+</head>
+
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1><span class="highlight">My</span> Collection</h1>
+            <p class="subtitle">お気に入りの瞬間やアイテムを、自由にコレクション。</p>
+
+            <div class="controls-bar">
+                <select id="sortSelect">
+                    <option value="custom">✦ 自由に並び替え</option>
+                    <option value="rating-desc">★ 評価が高い順</option>
+                    <option value="rating-asc">★ 評価が低い順</option>
+                    <option value="date-desc">🕒 日付が新しい順</option>
+                    <option value="date-asc">🕒 日付が古い順</option>
+                </select>
+                <div class="slider-container" title="カードのサイズを変更">
+                    <span class="material-icons-round" style="font-size: 1.2rem; opacity: 0.7;">grid_view</span>
+                    <input type="range" id="cardSizeSlider" min="150" max="400" step="10" value="280">
+                </div>
+            </div>
+
+            <div id="filterBar" class="filter-bar">
+                <!-- Filter buttons will be injected here -->
+            </div>
+        </header>
+
+        <main class="board-container" id="board">
+            <!-- Items will be injected here via JS -->
+            <div class="empty-state" id="emptyState">
+                <span class="material-icons-round empty-icon">dashboard_customize</span>
+                <p>まだコレクションがありません。<br>右下のボタンから追加してみましょう！</p>
+            </div>
+        </main>
+
+        <button class="fab" id="addBtn" aria-label="新しいアイテムを追加">
+            <span class="material-icons-round">add</span>
+        </button>
+    </div>
+
+    <!-- Modal Form -->
+    <div class="modal-overlay hidden" id="itemModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>新規コレクション</h2>
+                <button class="close-btn" id="closeModalBtn">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <form id="addForm">
+                <div class="form-group image-upload-group">
+                    <label for="imageInput" class="image-upload-label" id="imagePreviewContainer">
+                        <span class="material-icons-round">add_photo_alternate</span>
+                        <span>画像を選択</span>
+                        <img id="imagePreview" class="hidden" alt="Preview">
+                    </label>
+                    <input type="file" id="imageInput" accept="image/*" required>
+                </div>
+
+                <div class="form-group">
+                    <label>タグ</label>
+                    <div id="modalTagContainer" class="tag-input-container">
+                        <!-- Chip Input will be rendered here -->
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="memoInput">ひとことメモ (任意)</label>
+                    <textarea id="memoInput" placeholder="このアイテムの素敵なところは？" maxlength="140"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>評価</label>
+                    <div class="star-rating-input" id="starInput">
+                        <input type="radio" name="rating" id="star5" value="5"><label for="star5">★</label>
+                        <input type="radio" name="rating" id="star4" value="4"><label for="star4">★</label>
+                        <input type="radio" name="rating" id="star3" value="3"><label for="star3">★</label>
+                        <input type="radio" name="rating" id="star2" value="2"><label for="star2">★</label>
+                        <input type="radio" name="rating" id="star1" value="1"><label for="star1">★</label>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="submit-btn">
+                        <span>ボードに貼る</span>
+                        <span class="material-icons-round">check</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Image Lightbox -->
+    <div class="lightbox-overlay hidden" id="lightbox">
+        <button class="lightbox-close" id="lightboxClose">
+            <span class="material-icons-round">close</span>
+        </button>
+        <img id="lightboxImage" src="" alt="Full size preview">
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
