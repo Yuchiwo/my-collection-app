@@ -604,6 +604,12 @@ textarea:focus {
     cursor: grabbing;
 }
 
+.collection-card.active-editing {
+    z-index: 100;
+    position: relative;
+    /* Ensure z-index applies */
+}
+
 .collection-card.dragging {
     opacity: 0.5;
     transform: scale(0.95);

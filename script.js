@@ -849,6 +849,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Inline Editing (Tags) ---
     function startEditingTags(id, container, currentTags) {
+        // Find parent card to handle z-index
+        const card = container.closest('.collection-card');
+        if (card) card.classList.add('active-editing');
+
         container.className = 'tag-input-container';
         container.style.marginBottom = '8px';
 
@@ -856,6 +860,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const finishEditing = (finalTags) => {
             if (!isEditing) return;
             isEditing = false;
+            if (card) card.classList.remove('active-editing');
             updateItemTags(id, finalTags);
             document.removeEventListener('click', outsideClickListener);
         };
