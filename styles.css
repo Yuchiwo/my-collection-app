@@ -680,9 +680,11 @@ textarea:focus {
     flex-wrap: nowrap;
     overflow-x: auto;
     gap: 8px;
-    padding: 10px 0;
+    padding: 10px 16px;
+    /* Add side padding for scroll start/end */
     margin-top: 10px;
-    justify-content: center;
+    justify-content: flex-start;
+    /* Fix: 'center' causes left-side clipping on overflow */
     -ms-overflow-style: none;
     /* IE and Edge */
     scrollbar-width: none;
