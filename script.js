@@ -163,7 +163,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Force reset if mobile but size is "desktop-like" (> 180px)
         // 140px is safe for 2 columns on almost all screens (140+140+10gap+24padding = 314px)
         if (isMobile) {
-            if (!savedSize || parseInt(savedSize) > 180) {
+            // Optimize slider range for mobile:
+            // "Right side doing nothing" fix: Cap max size to 240px.
+            // Anything > ~200px is already 1 column on mobile, so 400px is wasteful.
+            cardSizeSlider.max = 240;
+
+            if (!savedSize || parseInt(savedSize) > 240) {
                 savedSize = 140;
                 localStorage.setItem('cardMinSize', savedSize); // Auto-fix storage
             }
