@@ -437,6 +437,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         input.addEventListener('keydown', (e) => {
+            if (e.isComposing) return; // Ignore Enter key during IME composition (Japanese)
+
             if (e.key === 'Enter' || e.key === ',') {
                 e.preventDefault();
                 addTag(input.value);
@@ -450,7 +452,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         input.addEventListener('input', showSuggestions);
         input.addEventListener('focus', showSuggestions);
-        input.addEventListener('blur', hideSuggestions);
+
+        input.addEventListener('blur', () => {
+            // Auto-add text as tag when leaving the field (Visual feedback)
+            if (input.value.trim()) addTag(input.value);
+            hideSuggestions();
+        });
 
         container.addEventListener('click', (e) => {
             if (e.target !== input && e.target !== dropdown && !dropdown.contains(e.target)) {

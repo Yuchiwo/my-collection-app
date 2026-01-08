@@ -937,35 +937,42 @@ textarea:focus {
         overflow: hidden;
         text-overflow: ellipsis;
     }
+}
 
-    /* Compact Mode (Small Grid / 4-column) */
-    .board-container.compact-mode .collection-card {
-        padding: 0;
-        border-radius: 4px;
-        background: transparent;
-        border: none;
-        box-shadow: none;
-    }
+/* Compact Mode (Small Grid / Image Only) - Global */
+.board-container.compact-mode .collection-card {
+    padding: 0;
+    border-radius: 4px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
 
-    .board-container.compact-mode .card-content,
-    .board-container.compact-mode .card-footer,
-    .board-container.compact-mode .star-display {
-        display: none !important;
-    }
+.board-container.compact-mode .card-content,
+.board-container.compact-mode .card-footer,
+.board-container.compact-mode .star-display {
+    display: none !important;
+}
 
-    .board-container.compact-mode .card-image-container {
-        height: 100%;
-        aspect-ratio: 1/1;
-        border-radius: 4px;
-    }
+.board-container.compact-mode .card-image-container {
+    height: 100%;
+    aspect-ratio: 1/1;
+    border-radius: 4px;
+}
 
-    .board-container.compact-mode .card-image {
-        border-radius: 4px;
-    }
+.board-container.compact-mode .card-image {
+    border-radius: 4px;
+}
 
+.board-container.compact-mode {
+    gap: 4px;
+    /* On Desktop, standard grid auto-fit works fine.
+       On Mobile, we force 4 columns. */
+}
+
+@media (max-width: 600px) {
     .board-container.compact-mode {
-        gap: 4px;
         grid-template-columns: repeat(4, 1fr);
-        /* Force 4 columns */
+        /* Force 4 columns only on mobile */
     }
 }
