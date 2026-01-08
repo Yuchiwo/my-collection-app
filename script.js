@@ -155,9 +155,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Card Size Logic ---
     function initCardSize() {
         const savedSize = localStorage.getItem('cardMinSize');
+
+        // Detect Mobile mainly for default
+        const isMobile = window.innerWidth < 600;
+        const defaultSize = isMobile ? 160 : 280;
+
         if (savedSize) {
             board.style.setProperty('--card-min-width', `${savedSize}px`);
             cardSizeSlider.value = savedSize;
+        } else {
+            // Set default explicit
+            board.style.setProperty('--card-min-width', `${defaultSize}px`);
+            cardSizeSlider.value = defaultSize;
         }
 
         cardSizeSlider.addEventListener('input', (e) => {
@@ -613,6 +622,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (div.draggable) {
+            // Touch Events for Mobile Reordering
+            div.addEventListener('touchstart', handleTouchStart, { passive: false });
+            div.addEventListener('touchmove', handleTouchMove, { passive: false });
+            div.addEventListener('touchend', handleTouchEnd);
+
+            // Mouse Events
             div.addEventListener('dragstart', handleDragStart);
             div.addEventListener('dragover', handleDragOver);
             div.addEventListener('drop', handleDrop);
@@ -821,7 +836,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleDragEnd(e) {
         this.classList.remove('dragging');
         draggedItem = null;
+        saveOrderAfterSort();
+    }
 
+    function handleDrop(e) { e.stopPropagation(); e.preventDefault(); return false; }
+
+    function saveOrderAfterSort() {
         const cards = Array.from(board.querySelectorAll('.collection-card'));
         const newItems = [];
         const newOrder = [];
@@ -836,12 +856,110 @@ document.addEventListener('DOMContentLoaded', () => {
 
         items = newItems;
         customOrder = newOrder;
-
-        // Async save
         db.saveOrder(customOrder).catch(console.error);
     }
 
-    function handleDrop(e) { e.stopPropagation(); e.preventDefault(); return false; }
+    // --- Touch Drag & Drop (Mobile Protection) ---
+    let touchTimer = null;
+    let touchItem = null;
+    let touchClone = null;
+    let startX = 0;
+    let startY = 0;
+
+    function handleTouchStart(e) {
+        if (currentSortMode !== 'custom' || currentFilterTag !== null) return;
+        if (e.touches.length > 1) return;
+
+        if (e.target.closest('button') || e.target.closest('input') || e.target.closest('textarea') || e.target.closest('.card-tags')) return;
+
+        touchItem = this;
+        const touch = e.touches[0];
+        startX = touch.clientX;
+        startY = touch.clientY;
+
+        touchTimer = setTimeout(() => {
+            startTouchDrag(touch);
+        }, 500);
+    }
+
+    function handleTouchMove(e) {
+        if (!touchItem) return;
+
+        const touch = e.touches[0];
+        const moveX = Math.abs(touch.clientX - startX);
+        const moveY = Math.abs(touch.clientY - startY);
+
+        if (touchTimer && (moveX > 10 || moveY > 10)) {
+            clearTimeout(touchTimer);
+            touchTimer = null;
+            touchItem = null;
+        }
+
+        if (touchClone) {
+            e.preventDefault();
+            touchClone.style.transform = `translate(${touch.clientX}px, ${touch.clientY}px)`;
+
+            touchClone.hidden = true;
+            const elemBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+            touchClone.hidden = false;
+
+            if (elemBelow) {
+                const targetCard = elemBelow.closest('.collection-card');
+                if (targetCard && targetCard !== touchItem && board.contains(targetCard)) {
+                    const cards = Array.from(board.querySelectorAll('.collection-card'));
+                    const draggedIndex = cards.indexOf(touchItem);
+                    const targetIndex = cards.indexOf(targetCard);
+
+                    if (draggedIndex < targetIndex) {
+                        targetCard.parentNode.insertBefore(touchItem, targetCard.nextSibling);
+                    } else {
+                        targetCard.parentNode.insertBefore(touchItem, targetCard);
+                    }
+                    if (navigator.vibrate) navigator.vibrate(50);
+                }
+            }
+        }
+    }
+
+    function handleTouchEnd(e) {
+        if (touchTimer) {
+            clearTimeout(touchTimer);
+            touchTimer = null;
+        }
+
+        if (touchClone) {
+            touchClone.remove();
+            touchClone = null;
+            touchItem.classList.remove('dragging');
+            touchItem.style.opacity = '1';
+            saveOrderAfterSort();
+        }
+        touchItem = null;
+    }
+
+    function startTouchDrag(touch) {
+        if (!touchItem) return;
+        touchTimer = null;
+
+        if (navigator.vibrate) navigator.vibrate(100);
+
+        const rect = touchItem.getBoundingClientRect();
+        touchClone = touchItem.cloneNode(true);
+        touchClone.style.position = 'fixed';
+        touchClone.style.top = '0';
+        touchClone.style.left = '0';
+        touchClone.style.width = `${rect.width}px`;
+        touchClone.style.height = `${rect.height}px`;
+        touchClone.style.zIndex = '9999';
+        touchClone.style.opacity = '0.9';
+        touchClone.style.pointerEvents = 'none';
+        touchClone.style.transform = `translate(${rect.left}px, ${rect.top}px)`;
+        touchClone.classList.add('dragging-clone');
+
+        document.body.appendChild(touchClone);
+
+        touchItem.style.opacity = '0.5';
+    }
 
     // Start App
     initApp();
