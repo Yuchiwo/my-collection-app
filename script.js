@@ -175,9 +175,17 @@ document.addEventListener('DOMContentLoaded', () => {
         board.style.setProperty('--card-min-width', `${finalSize}px`);
         cardSizeSlider.value = finalSize;
 
+        if (finalSize <= 100) board.classList.add('compact-mode');
+
         cardSizeSlider.addEventListener('input', (e) => {
-            const val = e.target.value;
+            const val = parseInt(e.target.value);
             board.style.setProperty('--card-min-width', `${val}px`);
+
+            if (val <= 100) {
+                board.classList.add('compact-mode');
+            } else {
+                board.classList.remove('compact-mode');
+            }
         });
 
         cardSizeSlider.addEventListener('change', (e) => {
