@@ -1,25 +1,29 @@
 {
     "name": "My Collection",
     "short_name": "Collection",
-    "start_url": "./index.html",
+    "description": "A beautiful way to organize your digital collections.",
+    "id": "/",
+    "start_url": "index.html",
+    "scope": "/",
     "display": "standalone",
     "background_color": "#0f172a",
     "theme_color": "#0f172a",
-    "description": "A beautiful way to organize your digital collections.",
     "icons": [
         {
             "src": "icon-192.png",
             "sizes": "192x192",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any maskable"
         },
         {
             "src": "icon-512.png",
             "sizes": "512x512",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any maskable"
         }
     ],
     "share_target": {
-        "action": "./index.html",
+        "action": "index.html",
         "method": "GET",
         "params": {
             "title": "title",
