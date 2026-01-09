@@ -475,40 +475,41 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function reloadData() {
-        // Load All Items
         const allItems = await db.getAllItems();
+        const order = await db.getOrder() || [];
+        syncWithRemoteData(allItems, order);
+    }
 
-        // Load Order
-        customOrder = await db.getOrder() || [];
+    let isSyncing = false; // Prevent feedback loops
+    async function syncWithRemoteData(remoteItems, remoteOrder) {
+        if (isSyncing) return;
 
-        // Sort items based on customOrder (restore list)
-        // If items exist not in order (newly added failure?), append them
-        // Map for O(1) access
+        // We need both items and order to render properly.
+        // If one is missing (partial update from snapshot), fetch the other from cache/state.
+        const finalItems = remoteItems || items;
+        const finalOrder = remoteOrder || customOrder;
+
+        // Same logic as old reloadData
         const map = new Map();
-        allItems.forEach(i => map.set(i.id, i));
+        finalItems.forEach(i => map.set(i.id, i));
 
         const orderedItems = [];
+        const newOrderList = [...finalOrder];
 
-        // Add by order
-        customOrder.forEach(id => {
+        finalOrder.forEach(id => {
             if (map.has(id)) {
                 orderedItems.push(map.get(id));
                 map.delete(id);
             }
         });
 
-        // Add any remaining (orphans) to the beginning (like unshift)
         for (const item of map.values()) {
             orderedItems.unshift(item);
-            customOrder.unshift(item.id); // Valid state fix
-        }
-
-        if (map.size > 0) {
-            // Need to save fixed order?
-            await db.saveOrder(customOrder);
+            newOrderList.unshift(item.id);
         }
 
         items = orderedItems;
+        customOrder = newOrderList;
         render();
     }
 
@@ -1424,7 +1425,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        let unsubscribeItems = null;
+        let unsubscribeOrder = null;
+
         onAuthStateChanged(auth, (user) => {
+            // Cleanup previous listeners if any
+            if (unsubscribeItems) unsubscribeItems();
+            if (unsubscribeOrder) unsubscribeOrder();
+
             if (user) {
                 currentUser = user;
                 dbMode = 'cloud';
@@ -1440,7 +1448,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 userName.textContent = user.displayName || 'User';
 
                 console.log("Switched to Cloud Mode. User:", user.displayName, user.uid);
-                reloadData(); // --- CRITICAL: Reload UI with Cloud Data ---
+
+                // --- Set up Real-time Listeners ---
+
+                // 1. Listen for Items
+                const itemsCol = collection(firestore, 'users', user.uid, 'items');
+                unsubscribeItems = onSnapshot(itemsCol, (snapshot) => {
+                    const remoteItems = [];
+                    snapshot.forEach(doc => remoteItems.push(doc.data()));
+
+                    // Simple logic: If we are in cloud mode, update state and render
+                    // This might be called frequently, but Firestore is smart.
+                    if (dbMode === 'cloud') {
+                        // Merge with local knowledge of items for reordering stability?
+                        // For now, let reloadData handle the heavy lifting to avoid duplication.
+                        // Actually, feeding remoteItems directly to reloadData logic is better.
+                        syncWithRemoteData(remoteItems, null);
+                    }
+                }, (error) => {
+                    console.error("Items Snapshot Error:", error);
+                });
+
+                // 2. Listen for Order
+                const orderDoc = doc(firestore, 'users', user.uid, 'meta', 'order');
+                unsubscribeOrder = onSnapshot(orderDoc, (snapshot) => {
+                    if (snapshot.exists()) {
+                        const newOrder = snapshot.data().value;
+                        if (dbMode === 'cloud') {
+                            syncWithRemoteData(null, newOrder);
+                        }
+                    }
+                }, (error) => {
+                    console.error("Order Snapshot Error:", error);
+                });
+
+                // Initial load
+                reloadData();
             } else {
                 currentUser = null;
                 dbMode = 'local';
@@ -1449,6 +1492,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 logoutBtn.classList.add('hidden');
                 if (syncBtn) syncBtn.classList.add('hidden'); // Hide Sync
                 userProfile.style.display = 'none';
+
+                reloadData(); // Back to local data
             }
         });
     }
