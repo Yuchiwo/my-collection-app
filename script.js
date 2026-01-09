@@ -100,12 +100,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Firestore Helpers ---
     async function saveToFirestore(item) {
-        if (!currentUser) return;
+        if (!currentUser) return false;
         try {
             const itemRef = doc(firestore, 'users', currentUser.uid, 'items', item.id);
             await setDoc(itemRef, item);
+            return true;
         } catch (e) {
             console.error("Firestore Save Error:", e);
+            return false;
         }
     }
 
@@ -313,22 +315,29 @@ document.addEventListener('DOMContentLoaded', () => {
     // Sync (Migration) Logic
     syncBtn.addEventListener('click', async () => {
         if (!currentUser) return;
-        if (!confirm('端末のデータをクラウドに上書きコピーしますか？\n（クラウド上のデータは保護されますが、念のため実行します）')) return;
+        if (!confirm('端末のデータをクラウドに上書きコピーしますか？\n（クラウド上のデータは保護されますが、現在端末で見えている内容で上書きされます）')) return;
 
         try {
             syncBtn.disabled = true;
-            syncBtn.classList.add('spinning'); // Add CSS animation later if wanted
+            syncBtn.style.opacity = '0.5';
 
             const localItems = await dbLocal.getAllItems();
             const total = localItems.length;
-            let count = 0;
+            let successCount = 0;
+            let failCount = 0;
 
             console.log(`Starting migration of ${total} items...`);
 
             for (const item of localItems) {
-                await saveToFirestore(item);
-                count++;
-                if (count % 5 === 0) console.log(`Uploaded ${count}/${total}...`);
+                const success = await saveToFirestore(item);
+                if (success) {
+                    successCount++;
+                } else {
+                    failCount++;
+                }
+                if ((successCount + failCount) % 5 === 0) {
+                    console.log(`Progress: ${successCount + failCount}/${total}...`);
+                }
             }
 
             // Sync Order too
@@ -337,13 +346,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 await saveFirestoreOrder(localOrder);
             }
 
-            alert(`同期完了！\n${count}個のデータをクラウドに保存しました。`);
+            if (failCount === 0) {
+                alert(`同期完了！\n${successCount}個のすべてのデータをクラウドに保存しました。`);
+            } else {
+                alert(`同期終了（一部失敗）\n成功: ${successCount}個\n失敗: ${failCount}個\n\n通信環境を確認して、もう一度お試しください。`);
+            }
         } catch (e) {
             console.error("Sync failed:", e);
-            alert("同期中にエラーが発生しました。");
+            alert("同期中に致命的なエラーが発生しました。");
         } finally {
             syncBtn.disabled = false;
-            syncBtn.classList.remove('spinning');
+            syncBtn.style.opacity = '1';
         }
     });
 
@@ -1427,6 +1440,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 userName.textContent = user.displayName || 'User';
 
                 console.log("Switched to Cloud Mode. User:", user.displayName, user.uid);
+                reloadData(); // --- CRITICAL: Reload UI with Cloud Data ---
             } else {
                 currentUser = null;
                 dbMode = 'local';
@@ -1444,60 +1458,3 @@ document.addEventListener('DOMContentLoaded', () => {
     initApp();
 });
 
-// --- Firebase Auth Logic ---
-function setupAuth() {
-    const loginBtn = document.getElementById('loginBtn');
-    const logoutBtn = document.getElementById('logoutBtn');
-    const userProfile = document.getElementById('userProfile');
-    const userAvatar = document.getElementById('userAvatar');
-    const userName = document.getElementById('userName');
-
-    if (!loginBtn) return;
-
-    console.log("Setting up Auth Listeners");
-
-    loginBtn.addEventListener('click', () => {
-        alert("ログイン処理を開始します...");
-        signInWithPopup(auth, googleProvider)
-            .then((result) => {
-                console.log("Logged in:", result.user);
-            }).catch((error) => {
-                console.error("Login failed:", error);
-                alert("ログインに失敗しました: " + error.message);
-            });
-    });
-
-    logoutBtn.addEventListener('click', () => {
-        if (confirm('ログアウトしますか？')) {
-            signOut(auth).then(() => {
-                console.log("Logged out");
-                window.location.reload();
-            });
-        }
-    });
-
-    onAuthStateChanged(auth, (user) => {
-        if (user) {
-            currentUser = user;
-            dbMode = 'cloud';
-
-            loginBtn.classList.add('hidden');
-            logoutBtn.classList.remove('hidden');
-            userProfile.style.display = 'flex';
-
-            // Fallback for missing photoURL
-            const avatarUrl = user.photoURL || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
-            userAvatar.src = avatarUrl;
-            userName.textContent = user.displayName || 'User';
-
-            console.log("Switched to Cloud Mode. User:", user.displayName, user.uid);
-        } else {
-            currentUser = null;
-            dbMode = 'local';
-
-            loginBtn.classList.remove('hidden');
-            logoutBtn.classList.add('hidden');
-            userProfile.style.display = 'none';
-        }
-    });
-}
