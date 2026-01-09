@@ -1363,29 +1363,39 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Share Target Logic ---
     function handleShareTarget() {
         const urlParams = new URLSearchParams(window.location.search);
-        const title = urlParams.get('title');
-        const text = urlParams.get('text');
-        const url = urlParams.get('url');
+        const title = urlParams.get('title') || '';
+        const text = urlParams.get('text') || '';
+        const rawUrl = urlParams.get('url') || '';
 
-        if (title || text || url) {
-            console.log("Share Target Received:", title, text, url);
+        // Some browsers put the URL in text or title. Let's find it.
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        const foundUrl = rawUrl || (text.match(urlRegex) || [])[0] || (title.match(urlRegex) || [])[0];
+
+        if (title || text || rawUrl || foundUrl) {
+            console.log("Share Target Received. URL:", foundUrl);
 
             modal.classList.remove('hidden');
             addForm.reset();
             resetImagePreview();
 
-            // If URL is shared, switch to Link tab
-            if (url) {
+            if (foundUrl) {
+                // Switch to Link tab
                 const linkTabBtn = document.querySelector('.tab-btn[data-tab="link"]');
                 if (linkTabBtn) linkTabBtn.click();
-                const linkInput = document.getElementById('linkInput');
-                if (linkInput) linkInput.value = url;
-            }
 
-            // Use text or title for Memo
-            const memoInput = document.getElementById('memoInput');
-            if (memoInput) {
-                memoInput.value = text || title || '';
+                const linkInput = document.getElementById('linkInput');
+                if (linkInput) linkInput.value = foundUrl;
+
+                // If text/title exist and aren't just the URL, put them in memo
+                const memoInput = document.getElementById('memoInput');
+                if (memoInput) {
+                    const memoValue = (text || title).replace(foundUrl, '').trim();
+                    memoInput.value = memoValue || title || '';
+                }
+            } else {
+                // Just text shared, stay on File tab but fill memo
+                const memoInput = document.getElementById('memoInput');
+                if (memoInput) memoInput.value = text || title || '';
             }
 
             // Clean URL
