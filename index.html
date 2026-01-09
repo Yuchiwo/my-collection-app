@@ -10,7 +10,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&family=Outfit:wght@400;600&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=14">
+    <link rel="stylesheet" href="styles.css?v=26">
     <!-- Google Material Icons -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <link rel="manifest" href="manifest.json">
@@ -29,7 +29,24 @@
     <div class="app-container">
         <header class="app-header">
             <h1><span class="highlight">My</span> Collection <span
-                    style="font-size: 0.5em; opacity: 0.5; vertical-align: middle;">v1.1</span></h1>
+                    style="font-size: 0.5em; opacity: 0.5; vertical-align: middle;">v1.2</span></h1>
+
+            <!-- Auth Controls -->
+            <div id="authContainer"
+                style="position: absolute; top: 20px; right: 20px; display: flex; align-items: center; gap: 10px;">
+                <div id="userProfile" style="display: none; align-items: center; gap: 8px;">
+                    <img id="userAvatar" src=""
+                        style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--accent-color);">
+                    <span id="userName" style="font-size: 0.9rem; font-weight: 600;"></span>
+                </div>
+                <button id="loginBtn" class="action-btn-small" style="background: white; color: var(--bg-color);">
+                    <span class="material-icons-round" style="font-size: 16px;">login</span> ログイン
+                </button>
+                <button id="logoutBtn" class="action-btn-small hidden" style="background: rgba(255,255,255,0.1);">
+                    <span class="material-icons-round" style="font-size: 16px;">logout</span>
+                </button>
+            </div>
+
             <p class="subtitle">お気に入りの瞬間やアイテムを、自由にコレクション。</p>
 
             <div class="controls-bar">
@@ -47,6 +64,9 @@
                 </div>
 
                 <div class="action-buttons">
+                    <button id="syncBtn" class="icon-btn hidden" title="クラウドに同期（アップロード）">
+                        <span class="material-icons-round">cloud_upload</span>
+                    </button>
                     <button id="backupBtn" class="icon-btn" title="データを保存 (バックアップ)">
                         <span class="material-icons-round">download</span>
                     </button>
@@ -56,7 +76,7 @@
                     <input type="file" id="restoreInput" accept=".json" style="display: none;">
                 </div>
             </div>
-
+            <!-- Filter Bar injected here -->
             <div id="filterBar" class="filter-bar">
                 <!-- Filter buttons will be injected here -->
             </div>
@@ -85,13 +105,36 @@
                 </button>
             </div>
             <form id="addForm">
-                <div class="form-group image-upload-group">
-                    <label for="imageInput" class="image-upload-label" id="imagePreviewContainer">
-                        <span class="material-icons-round">add_photo_alternate</span>
-                        <span>画像を選択</span>
-                        <img id="imagePreview" class="hidden" alt="Preview">
-                    </label>
-                    <input type="file" id="imageInput" accept="image/*" required>
+                <!-- Tabs -->
+                <div class="input-tabs">
+                    <button type="button" class="tab-btn active" data-tab="file">画像</button>
+                    <button type="button" class="tab-btn" data-tab="link">URL</button>
+                </div>
+
+                <!-- Tab: Image File -->
+                <div class="tab-content active" id="tab-file">
+                    <div class="form-group image-upload-group">
+                        <label for="imageInput" class="image-upload-label" id="imagePreviewContainer">
+                            <span class="material-icons-round">add_photo_alternate</span>
+                            <span>画像を選択</span>
+                            <img id="imagePreview" class="hidden" alt="Preview">
+                        </label>
+                        <input type="file" id="imageInput" accept="image/*"
+                            style="opacity: 0; position: absolute; inset: 0; cursor: pointer;">
+                    </div>
+                </div>
+
+                <!-- Tab: Link -->
+                <div class="tab-content" id="tab-link">
+                    <div class="form-group link-input-group" style="display: flex; gap: 8px;">
+                        <input type="url" id="linkInput" placeholder="https://example.com" autocomplete="off"
+                            style="flex: 1; padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: white;">
+                        <button type="button" id="fetchLinkBtn" class="action-btn-small"
+                            style="padding: 0 16px; background: var(--accent-color); border: none; border-radius: 12px; color: white; cursor: pointer;">取得</button>
+                    </div>
+                    <div id="linkPreviewStatus" class="status-msg"
+                        style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px; min-height: 20px;">
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -102,8 +145,8 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="memoInput">ひとことメモ (任意)</label>
-                    <textarea id="memoInput" placeholder="このアイテムの素敵なところは？" maxlength="140"></textarea>
+                    <label for="memoInput">ひとことメモ / タイトル</label>
+                    <input type="text" id="memoInput" placeholder="思い出やコメント..." maxlength="50">
                 </div>
 
                 <div class="form-group">
@@ -135,7 +178,7 @@
         <img id="lightboxImage" src="" alt="Full size preview">
     </div>
 
-    <script src="script.js"></script>
+    <script type="module" src="script.js?v=45"></script>
 </body>
 
 </html>

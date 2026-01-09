@@ -1,7 +1,11 @@
+import { auth, googleProvider, signInWithPopup, signOut, onAuthStateChanged, db as firestore, collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, setDoc } from './firebase-config.js';
+
+const DB_NAME = 'ghost_pioneer_db';
+const DB_VERSION = 1;
+
 document.addEventListener('DOMContentLoaded', () => {
     // --- IndexedDB Management ---
-    const DB_NAME = 'ghost_pioneer_db';
-    const DB_VERSION = 1;
+
 
     class DBManager {
         constructor() {
@@ -92,7 +96,106 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    const db = new DBManager();
+    const dbLocal = new DBManager();
+
+    // --- Firestore Helpers ---
+    async function saveToFirestore(item) {
+        if (!currentUser) return;
+        try {
+            const itemRef = doc(firestore, 'users', currentUser.uid, 'items', item.id);
+            await setDoc(itemRef, item);
+        } catch (e) {
+            console.error("Firestore Save Error:", e);
+        }
+    }
+
+    async function deleteFromFirestore(id) {
+        if (!currentUser) return;
+        try {
+            await deleteDoc(doc(firestore, 'users', currentUser.uid, 'items', id));
+        } catch (e) {
+            console.error("Firestore Delete Error:", e);
+        }
+    }
+
+    async function getFirestoreItems() {
+        if (!currentUser) return [];
+        const q = query(collection(firestore, 'users', currentUser.uid, 'items'));
+        const querySnapshot = await getDocs(q);
+        const remoteItems = [];
+        querySnapshot.forEach((doc) => {
+            remoteItems.push(doc.data());
+        });
+        return remoteItems;
+    }
+
+    async function saveFirestoreOrder(order) {
+        if (!currentUser) return;
+        try {
+            await setDoc(doc(firestore, 'users', currentUser.uid, 'meta', 'order'), { value: order });
+        } catch (e) {
+            console.error("Firestore Order Save Error:", e);
+        }
+    }
+
+    async function getFirestoreOrder() {
+        if (!currentUser) return [];
+        try {
+            const docRef = doc(firestore, 'users', currentUser.uid, 'meta', 'order');
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                return docSnap.data().value;
+            }
+            return [];
+        } catch (e) {
+            console.error("Firestore Order Fetch Error:", e);
+            return [];
+        }
+    }
+
+    // --- DB Proxy (Hybrid) ---
+    // Handles switching between Local (IndexedDB) and Cloud (Firestore)
+    const db = {
+        init: async () => await dbLocal.init(),
+        getAllItems: async () => {
+            // Strategy: Load from Local first for speed, then sync with Cloud?
+            // For now: specific mode switch.
+            if (dbMode === 'cloud') {
+                const cloudItems = await getFirestoreItems();
+                // Merge/Sync logic could go here. For now, Cloud source of truth if connected.
+                if (cloudItems.length > 0) return cloudItems;
+                // If cloud empty, maybe first sync? fallback to local?
+                return await dbLocal.getAllItems();
+            }
+            return await dbLocal.getAllItems();
+        },
+        saveItem: async (item) => {
+            await dbLocal.saveItem(item); // Always save local (Cache/Offline)
+            if (dbMode === 'cloud') {
+                await saveToFirestore(item);
+            }
+        },
+        deleteItem: async (id) => {
+            await dbLocal.deleteItem(id);
+            if (dbMode === 'cloud') {
+                await deleteFromFirestore(id);
+            }
+        },
+        saveOrder: async (order) => {
+            await dbLocal.saveOrder(order);
+            if (dbMode === 'cloud') {
+                await saveFirestoreOrder(order);
+            }
+        },
+        getOrder: async () => {
+            if (dbMode === 'cloud') {
+                const cloudOrder = await getFirestoreOrder();
+                if (cloudOrder && cloudOrder.length > 0) return cloudOrder;
+            }
+            return await dbLocal.getOrder();
+        }
+    };
+
 
     // --- Image Compression ---
     function compressImage(file, maxWidth = 800, quality = 0.7) {
@@ -151,6 +254,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentSortMode = 'custom';
     let currentFilterTag = null;
     let customOrder = []; // Array of IDs
+    let currentUser = null;
+    let dbMode = 'local';
 
     // --- Card Size Logic ---
     function initCardSize() {
@@ -203,6 +308,44 @@ document.addEventListener('DOMContentLoaded', () => {
     const backupBtn = document.getElementById('backupBtn');
     const restoreBtn = document.getElementById('restoreBtn');
     const restoreInput = document.getElementById('restoreInput');
+    const syncBtn = document.getElementById('syncBtn');
+
+    // Sync (Migration) Logic
+    syncBtn.addEventListener('click', async () => {
+        if (!currentUser) return;
+        if (!confirm('端末のデータをクラウドに上書きコピーしますか？\n（クラウド上のデータは保護されますが、念のため実行します）')) return;
+
+        try {
+            syncBtn.disabled = true;
+            syncBtn.classList.add('spinning'); // Add CSS animation later if wanted
+
+            const localItems = await dbLocal.getAllItems();
+            const total = localItems.length;
+            let count = 0;
+
+            console.log(`Starting migration of ${total} items...`);
+
+            for (const item of localItems) {
+                await saveToFirestore(item);
+                count++;
+                if (count % 5 === 0) console.log(`Uploaded ${count}/${total}...`);
+            }
+
+            // Sync Order too
+            const localOrder = await dbLocal.getOrder();
+            if (localOrder && localOrder.length > 0) {
+                await saveFirestoreOrder(localOrder);
+            }
+
+            alert(`同期完了！\n${count}個のデータをクラウドに保存しました。`);
+        } catch (e) {
+            console.error("Sync failed:", e);
+            alert("同期中にエラーが発生しました。");
+        } finally {
+            syncBtn.disabled = false;
+            syncBtn.classList.remove('spinning');
+        }
+    });
 
     backupBtn.addEventListener('click', async () => {
         try {
@@ -299,8 +442,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     await db.saveOrder(orderIds); // Save initial order
 
-                    // Clear LS
-                    localStorage.removeItem('collectionItems');
+                    if (navigator.storage && navigator.storage.persist) {
+                        navigator.storage.persist().then(granted => {
+                            if (granted) console.log("Storage persisted.");
+                        });
+                    }
                     console.log("Migration Complete.");
                 } catch (e) {
                     console.error("Migration Failed:", e);
@@ -308,6 +454,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             await reloadData();
+            handleShareTarget(); // Check for shared content
         } catch (e) {
             console.error("App Init Failed:", e);
             alert("データベースの読み込みに失敗しました。");
@@ -691,8 +838,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         tagsHtml += '</div>';
 
+        // Link Indicator
+        const linkIconHtml = item.link
+            ? `<div class="card-link-icon"><span class="material-icons-round" style="font-size: 14px;">link</span></div>`
+            : '';
+
         div.innerHTML = `
             <div class="card-image-container">
+                ${linkIconHtml}
                 <img src="${item.image}" alt="collection item" class="card-image" loading="lazy">
             </div>
             <div class="card-content">
@@ -721,7 +874,13 @@ document.addEventListener('DOMContentLoaded', () => {
         deleteBtn.addEventListener('click', () => deleteItem(item.id));
 
         const img = div.querySelector('.card-image');
-        img.addEventListener('click', () => openLightbox(item.image));
+        img.addEventListener('click', () => {
+            if (item.link) {
+                window.open(item.link, '_blank');
+            } else {
+                openLightbox(item.image);
+            }
+        });
 
         const memoP = div.querySelector('.card-memo');
         memoP.addEventListener('click', () => startEditingMemo(item.id, memoP));
@@ -755,12 +914,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- UI Interactions ---
 
+    // Tab Logic
+    const tabs = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+    let currentTab = 'file';
+
+    console.log('Initializing Tabs:', tabs.length);
+
+    tabs.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent form submission if inside form
+            console.log('Tab Clicked:', btn.dataset.tab);
+
+            currentTab = btn.dataset.tab;
+            tabs.forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            tabContents.forEach(c => {
+                c.id === `tab-${currentTab}` ? c.classList.add('active') : c.classList.remove('active');
+            });
+        });
+    });
+
     addBtn.addEventListener('click', () => {
         modal.classList.remove('hidden');
         addForm.reset();
         resetImagePreview();
         modalTagManager.reset();
         document.getElementById('star3').checked = true;
+
+        // Reset Tab
+        currentTab = 'file';
+        tabs[0].click();
     });
 
     function closeModal() {
@@ -772,20 +956,77 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target === modal) closeModal();
     });
 
+    // Link Fetching
+    const linkInput = document.getElementById('linkInput');
+    const fetchLinkBtn = document.getElementById('fetchLinkBtn');
+    const linkStatus = document.getElementById('linkPreviewStatus');
+
+    async function fetchLinkInfo() {
+        const url = linkInput.value.trim();
+        if (!url) return;
+
+        linkStatus.textContent = '情報を取得中...';
+
+        try {
+            const api = `https://api.microlink.io?url=${encodeURIComponent(url)}`;
+            const res = await fetch(api);
+            const data = await res.json();
+
+            if (data.status === 'success') {
+                const meta = data.data;
+                const imgUrl = meta.image ? meta.image.url : null;
+                const title = meta.title || '';
+
+                if (imgUrl) {
+                    try {
+                        const imgRes = await fetch(imgUrl);
+                        const blob = await imgRes.blob();
+                        const base64 = await new Promise(r => {
+                            const reader = new FileReader();
+                            reader.onload = () => r(reader.result);
+                            reader.readAsDataURL(blob);
+                        });
+                        imagePreview.src = base64;
+                    } catch (e) {
+                        // Fallback for CORS images
+                        imagePreview.src = imgUrl;
+                    }
+
+                    imagePreview.classList.remove('hidden');
+                    // imagePreviewContainer.querySelector('span').style.opacity = '0'; // Only relevant for file tab, but safe to ignore
+                    linkStatus.textContent = '取得成功: ' + title;
+
+                    // Auto-fill title if empty
+                    const memoInput = document.getElementById('memoInput');
+                    if (!memoInput.value) memoInput.value = title;
+                } else {
+                    linkStatus.textContent = '画像が見つかりませんでした。';
+                    // Keep placeholder logic in submit if needed, or set placeholder here?
+                    // Let's reset preview to empty so submit handler generates placeholder if user doesn't strictly need OGP image
+                    if (imagePreview.src.startsWith('data:')) {
+                        // Keep existing placeholder if any
+                    } else {
+                        imagePreview.classList.add('hidden');
+                    }
+                }
+            } else {
+                linkStatus.textContent = '情報の取得に失敗しました。';
+            }
+        } catch (e) {
+            console.error(e);
+            linkStatus.textContent = 'エラーが発生しました。';
+        }
+    }
+
+    fetchLinkBtn.addEventListener('click', fetchLinkInfo);
+
     // Image Handling + Compression
     imageInput.addEventListener('change', async function (e) {
         const file = e.target.files[0];
         if (!file) return;
 
-        // Old check removed: if (file.size > 2 * 1024 * 1024) ...
-        // Now we compress so we handle large files.
-        // Maybe show Loading Spinner? 
-
         try {
-            // Show preview immediately using raw file? Or wait for compress?
-            // Wait for compress is safer for "what you see is what you get".
             const compressedBase64 = await compressImage(file);
-
             imagePreview.src = compressedBase64;
             imagePreview.classList.remove('hidden');
             imagePreviewContainer.querySelector('span').style.opacity = '0';
@@ -800,13 +1041,36 @@ document.addEventListener('DOMContentLoaded', () => {
         imagePreview.src = '';
         imagePreview.classList.add('hidden');
         imagePreviewContainer.querySelector('span').style.opacity = '1';
+        if (linkStatus) linkStatus.textContent = '';
+    }
+
+    // Helper: Generate Placeholder for Link
+    function generateLinkPlaceholder() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 300;
+        canvas.height = 300;
+        const ctx = canvas.getContext('2d');
+
+        // Background
+        ctx.fillStyle = '#1e1e1e';
+        ctx.fillRect(0, 0, 300, 300);
+
+        // Icon
+        ctx.font = '100px "Material Icons Round"';
+        ctx.fillStyle = '#64748b';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        // Draw "link" icon text (or simple text if font not ready, but usually works)
+        ctx.fillText('link', 150, 150);
+
+        return canvas.toDataURL('image/png');
     }
 
     addForm.addEventListener('submit', (e) => {
         e.preventDefault();
 
         const memo = document.getElementById('memoInput').value;
-        modalTagManager.addPendingTag(); // Capture any text currently in the input
+        modalTagManager.addPendingTag();
         const tags = modalTagManager.getTags();
         const ratingInputs = document.querySelectorAll('input[name="rating"]');
         let rating = 3;
@@ -817,17 +1081,43 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        if (!imagePreview.src || imagePreview.src === window.location.href) {
-            alert('画像を選択してください');
-            return;
+        let finalImage = imagePreview.src;
+        let linkUrl = null;
+
+        if (currentTab === 'link') {
+            linkUrl = document.getElementById('linkInput').value.trim();
+            if (!linkUrl) {
+                alert('URLを入力してください');
+                return;
+            }
+            // If user fetched image, finalImage is set.
+            // If not, or if fetch failed, use placeholder.
+            if (!finalImage || finalImage === window.location.href || finalImage.includes('display: none')) { // Check visibility roughly
+                finalImage = generateLinkPlaceholder();
+            }
+            // Ensure we don't accidentally use the placeholder from a previous file upload if we switched tabs?
+            // Actually, resetImagePreview called on modal open clears it.
+            // If user uploads image on Tab A, then switches to Tab B -> we should probably clear imagePreview or handle it.
+            // For simplicity: If Tab B (Link), we trust imagePreview ONLY IF it was set by fetch (which we can't easily track without state, but if user clicked fetch it replaces src).
+            // Let's assume if imagePreview is hidden, we use placeholder.
+            if (imagePreview.classList.contains('hidden')) {
+                finalImage = generateLinkPlaceholder();
+            }
+        } else {
+            // File Tab
+            if (!finalImage || finalImage === window.location.href || imagePreview.classList.contains('hidden')) {
+                alert('画像を選択してください');
+                return;
+            }
         }
 
         const newItem = {
             id: Date.now().toString(),
-            image: imagePreview.src, // Already compressed
+            image: finalImage,
             memo: memo,
             rating: rating,
             tags: tags,
+            link: linkUrl,
             createdAt: new Date().toISOString()
         };
 
@@ -1056,30 +1346,158 @@ document.addEventListener('DOMContentLoaded', () => {
         touchItem = null;
     }
 
-    function startTouchDrag(touch) {
-        if (!touchItem) return;
-        touchTimer = null;
+    // --- Share Target Logic ---
+    function handleShareTarget() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const title = urlParams.get('title');
+        const text = urlParams.get('text');
+        const url = urlParams.get('url');
 
-        if (navigator.vibrate) navigator.vibrate(100);
+        if (title || text || url) {
+            console.log("Share Target Received:", title, text, url);
 
-        const rect = touchItem.getBoundingClientRect();
-        touchClone = touchItem.cloneNode(true);
-        touchClone.style.position = 'fixed';
-        touchClone.style.top = '0';
-        touchClone.style.left = '0';
-        touchClone.style.width = `${rect.width}px`;
-        touchClone.style.height = `${rect.height}px`;
-        touchClone.style.zIndex = '9999';
-        touchClone.style.opacity = '0.9';
-        touchClone.style.pointerEvents = 'none';
-        touchClone.style.transform = `translate(${rect.left}px, ${rect.top}px)`;
-        touchClone.classList.add('dragging-clone');
+            modal.classList.remove('hidden');
+            addForm.reset();
+            resetImagePreview();
 
-        document.body.appendChild(touchClone);
+            // If URL is shared, switch to Link tab
+            if (url) {
+                const linkTabBtn = document.querySelector('.tab-btn[data-tab="link"]');
+                if (linkTabBtn) linkTabBtn.click();
+                const linkInput = document.getElementById('linkInput');
+                if (linkInput) linkInput.value = url;
+            }
 
-        touchItem.style.opacity = '0.5';
+            // Use text or title for Memo
+            const memoInput = document.getElementById('memoInput');
+            if (memoInput) {
+                memoInput.value = text || title || '';
+            }
+
+            // Clean URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    }
+
+    // --- Firebase Auth Logic ---
+    function setupAuth() {
+        const loginBtn = document.getElementById('loginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const userProfile = document.getElementById('userProfile');
+        const userAvatar = document.getElementById('userAvatar');
+        const userName = document.getElementById('userName');
+
+        if (!loginBtn) return;
+
+        console.log("Setting up Auth Listeners");
+
+        loginBtn.addEventListener('click', () => {
+            // alert("ログイン処理を開始します..."); // Remove debug alert
+            signInWithPopup(auth, googleProvider)
+                .then((result) => {
+                    console.log("Logged in:", result.user);
+                }).catch((error) => {
+                    console.error("Login failed:", error);
+                    alert("ログインに失敗しました: " + error.message);
+                });
+        });
+
+        logoutBtn.addEventListener('click', () => {
+            if (confirm('ログアウトしますか？')) {
+                signOut(auth).then(() => {
+                    console.log("Logged out");
+                    window.location.reload();
+                });
+            }
+        });
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                dbMode = 'cloud';
+
+                loginBtn.classList.add('hidden');
+                logoutBtn.classList.remove('hidden');
+                if (syncBtn) syncBtn.classList.remove('hidden'); // Show Sync
+                userProfile.style.display = 'flex';
+
+                // Fallback for missing photoURL
+                const avatarUrl = user.photoURL || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
+                userAvatar.src = avatarUrl;
+                userName.textContent = user.displayName || 'User';
+
+                console.log("Switched to Cloud Mode. User:", user.displayName, user.uid);
+            } else {
+                currentUser = null;
+                dbMode = 'local';
+
+                loginBtn.classList.remove('hidden');
+                logoutBtn.classList.add('hidden');
+                if (syncBtn) syncBtn.classList.add('hidden'); // Hide Sync
+                userProfile.style.display = 'none';
+            }
+        });
     }
 
     // Start App
+    setupAuth();
     initApp();
 });
+
+// --- Firebase Auth Logic ---
+function setupAuth() {
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const userProfile = document.getElementById('userProfile');
+    const userAvatar = document.getElementById('userAvatar');
+    const userName = document.getElementById('userName');
+
+    if (!loginBtn) return;
+
+    console.log("Setting up Auth Listeners");
+
+    loginBtn.addEventListener('click', () => {
+        alert("ログイン処理を開始します...");
+        signInWithPopup(auth, googleProvider)
+            .then((result) => {
+                console.log("Logged in:", result.user);
+            }).catch((error) => {
+                console.error("Login failed:", error);
+                alert("ログインに失敗しました: " + error.message);
+            });
+    });
+
+    logoutBtn.addEventListener('click', () => {
+        if (confirm('ログアウトしますか？')) {
+            signOut(auth).then(() => {
+                console.log("Logged out");
+                window.location.reload();
+            });
+        }
+    });
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUser = user;
+            dbMode = 'cloud';
+
+            loginBtn.classList.add('hidden');
+            logoutBtn.classList.remove('hidden');
+            userProfile.style.display = 'flex';
+
+            // Fallback for missing photoURL
+            const avatarUrl = user.photoURL || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
+            userAvatar.src = avatarUrl;
+            userName.textContent = user.displayName || 'User';
+
+            console.log("Switched to Cloud Mode. User:", user.displayName, user.uid);
+        } else {
+            currentUser = null;
+            dbMode = 'local';
+
+            loginBtn.classList.remove('hidden');
+            logoutBtn.classList.add('hidden');
+            userProfile.style.display = 'none';
+        }
+    });
+}

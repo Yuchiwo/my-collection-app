@@ -207,6 +207,94 @@ body {
     color: #ef4444;
 }
 
+/* Modal Tabs ********************************/
+.input-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 4px;
+    border-radius: 8px;
+}
+
+.tab-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.tab-btn.active {
+    background: var(--card-bg);
+    color: var(--accent-color);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+    animation: fadeIn 0.3s ease;
+}
+
+.link-input-group {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+#linkInput {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.action-btn-small {
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    padding: 0 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.status-msg {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+    min-height: 1.2em;
+}
+
+/* Card Link Icon */
+.card-link-icon {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 14px;
+    pointer-events: none;
+    z-index: 2;
+}
+
 /* FAB */
 .fab {
     position: fixed;
@@ -252,6 +340,25 @@ body {
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s ease;
+}
+
+/* Lightbox ******************************/
+.lightbox-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    /* More transparent */
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease-out;
 }
 
 .modal-overlay:not(.hidden) {
@@ -475,11 +582,6 @@ textarea:focus {
 
 /* Animations */
 @keyframes fadeInDown {
-    from {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-
     to {
         opacity: 1;
         transform: translateY(0);
@@ -502,16 +604,21 @@ textarea:focus {
     display: none !important;
 }
 
+.collection-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    overflow: hidden;
+    /* border: 1px solid rgba(255, 255, 255, 0.1); */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+    user-select: none;
+    -webkit-user-select: none;
+    position: relative;
+    /* Removed content-visibility for stability */
+}
+
 /* Lightbox ******************************/
 .lightbox-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.4);
-    /* More transparent */
-    backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -519,6 +626,13 @@ textarea:focus {
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s ease-out;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
 }
 
 .lightbox-overlay:not(.hidden) {
@@ -626,7 +740,12 @@ textarea:focus {
 
 #sortSelect {
     background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    /* border: 1px solid rgba(255, 255, 255, 0.1); */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+    user-select: none;
+    -webkit-user-select: none;
+    position: relative;
     color: var(--text-primary);
     padding: 8px 16px;
     border-radius: 20px;
@@ -634,7 +753,6 @@ textarea:focus {
     cursor: pointer;
     font-family: var(--font-jp);
     outline: none;
-    transition: all 0.2s;
     backdrop-filter: blur(10px);
     appearance: none;
     text-align: center;
@@ -975,4 +1093,80 @@ textarea:focus {
         grid-template-columns: repeat(4, 1fr);
         /* Force 4 columns only on mobile */
     }
+}
+
+/* Modal Tabs */
+.input-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 8px;
+}
+
+.tab-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 8px 16px;
+    cursor: pointer;
+    font-weight: 600;
+    position: relative;
+    transition: color 0.2s;
+    z-index: 10;
+    pointer-events: auto;
+}
+
+.tab-btn.active {
+    color: var(--accent-color);
+}
+
+.tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: var(--accent-color);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Card Link Icon */
+.card-link-icon {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    z-index: 5;
+    pointer-events: none;
+    /* Let clicks pass through to image */
 }
