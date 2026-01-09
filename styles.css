@@ -1047,7 +1047,27 @@ textarea:focus {
     }
 
     .filter-bar {
-        padding-bottom: 8px;
+        padding: 5px 12px 12px 12px;
+        display: flex;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        gap: 8px;
+        justify-content: flex-start;
+        /* CRITICAL: Prevent left clipping */
+        width: 100%;
+        scrollbar-width: none;
+        /* Firefox */
+    }
+
+    .filter-bar::-webkit-scrollbar {
+        display: none;
+        /* Chrome/Safari */
+    }
+
+    .filter-pill {
+        flex: 0 0 auto;
+        /* Prevent shrinking */
+        white-space: nowrap;
     }
 
     /* Mobile Tag Fixes */

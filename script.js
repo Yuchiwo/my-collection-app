@@ -1367,33 +1367,33 @@ document.addEventListener('DOMContentLoaded', () => {
         const text = urlParams.get('text') || '';
         const rawUrl = urlParams.get('url') || '';
 
-        // Some browsers put the URL in text or title. Let's find it.
+        // Robust URL detection (Common for Android/Chrome sharing)
         const urlRegex = /(https?:\/\/[^\s]+)/g;
         const foundUrl = rawUrl || (text.match(urlRegex) || [])[0] || (title.match(urlRegex) || [])[0];
 
         if (title || text || rawUrl || foundUrl) {
-            console.log("Share Target Received. URL:", foundUrl);
+            console.log("Share Target Received. Detected URL:", foundUrl);
 
             modal.classList.remove('hidden');
             addForm.reset();
             resetImagePreview();
 
             if (foundUrl) {
-                // Switch to Link tab
+                // Change to Link tab automatically
                 const linkTabBtn = document.querySelector('.tab-btn[data-tab="link"]');
                 if (linkTabBtn) linkTabBtn.click();
 
                 const linkInput = document.getElementById('linkInput');
                 if (linkInput) linkInput.value = foundUrl;
 
-                // If text/title exist and aren't just the URL, put them in memo
+                // Move other info to memo
                 const memoInput = document.getElementById('memoInput');
                 if (memoInput) {
-                    const memoValue = (text || title).replace(foundUrl, '').trim();
-                    memoInput.value = memoValue || title || '';
+                    const extraInfo = (text || title).replace(foundUrl, '').trim();
+                    memoInput.value = extraInfo || title || '';
                 }
             } else {
-                // Just text shared, stay on File tab but fill memo
+                // Just text shared, show in memo
                 const memoInput = document.getElementById('memoInput');
                 if (memoInput) memoInput.value = text || title || '';
             }
