@@ -63,6 +63,17 @@ body {
     text-align: center;
     margin-bottom: 3rem;
     animation: fadeInDown 0.8s ease-out;
+    position: relative;
+}
+
+.auth-container {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 100;
 }
 
 .app-header h1 {
@@ -1169,4 +1180,28 @@ textarea:focus {
     z-index: 5;
     pointer-events: none;
     /* Let clicks pass through to image */
+}
+
+/* Mobile Header Adjustment */
+@media (max-width: 600px) {
+    .app-header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding-top: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .auth-container {
+        position: static;
+        order: -1;
+        margin-bottom: 1rem;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .app-header h1 {
+        font-size: 2.2rem;
+        margin-bottom: 0.2rem;
+    }
 }
