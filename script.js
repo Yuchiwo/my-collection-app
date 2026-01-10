@@ -632,8 +632,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         return {
             getTags: () => tags,
-            addPendingTag: () => {
-                if (input.value.trim()) addTag(input.value);
+            addPendingTag: (text) => {
+                const val = text || input.value;
+                if (val.trim()) addTag(val);
             },
             reset: () => {
                 tags = [];
@@ -1086,6 +1087,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const memo = document.getElementById('memoInput').value;
         modalTagManager.addPendingTag();
         const tags = modalTagManager.getTags();
+
+        // Auto-add "web" tag if Link tab is active
+        if (currentTab === 'link' && !tags.includes('web')) {
+            tags.push('web');
+        }
         const ratingInputs = document.querySelectorAll('input[name="rating"]');
         let rating = 3;
         for (const input of ratingInputs) {
@@ -1385,6 +1391,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const linkInput = document.getElementById('linkInput');
                 if (linkInput) linkInput.value = foundUrl;
+
+                // Auto-add "web" tag
+                if (modalTagManager) modalTagManager.addPendingTag('web');
 
                 // Move other info to memo
                 const memoInput = document.getElementById('memoInput');
