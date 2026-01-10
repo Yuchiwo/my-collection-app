@@ -1508,7 +1508,26 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- Theme Logic ---
+    function setupTheme() {
+        const themeSelect = document.getElementById('themeSelect');
+        const savedTheme = localStorage.getItem('theme') || 'default';
+
+        // Apply saved theme
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        if (themeSelect) themeSelect.value = savedTheme;
+
+        if (themeSelect) {
+            themeSelect.addEventListener('change', (e) => {
+                const newTheme = e.target.value;
+                document.documentElement.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+            });
+        }
+    }
+
     // Start App
+    setupTheme();
     setupAuth();
     initApp();
 });

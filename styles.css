@@ -14,6 +14,37 @@
     --font-jp: 'M PLUS Rounded 1c', sans-serif;
     --font-en: 'Outfit', sans-serif;
     --yellow-star: #fbbf24;
+    --control-bg: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="light"] {
+    --bg-color: #f8fafc;
+    --card-bg: rgba(255, 255, 255, 0.8);
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --accent-color: #6366f1;
+    --accent-hover: #4f46e5;
+    --gradient-bg: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    --modal-bg: #ffffff;
+    --border-color: rgba(0, 0, 0, 0.1);
+    --glass-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.1);
+    --glass-border: 1px solid rgba(0, 0, 0, 0.05);
+    --control-bg: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] {
+    --bg-color: #000000;
+    --card-bg: rgba(24, 24, 27, 0.8);
+    --text-primary: #f8fafc;
+    --text-secondary: #a1a1aa;
+    --accent-color: #a855f7;
+    --accent-hover: #9333ea;
+    --gradient-bg: linear-gradient(135deg, #000000 0%, #18181b 100%);
+    --modal-bg: #18181b;
+    --border-color: rgba(255, 255, 255, 0.15);
+    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+    --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+    --control-bg: rgba(255, 255, 255, 0.15);
 }
 
 * {
@@ -463,13 +494,13 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--control-bg);
     /* Match select bg basically */
     padding: 0 12px;
     height: 40px;
     /* Match select height */
     border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-color);
 }
 
 .slider-container input[type=range] {
@@ -494,7 +525,7 @@ body {
     width: 100%;
     height: 4px;
     cursor: pointer;
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--border-color);
     border-radius: 2px;
 }
 
@@ -749,8 +780,9 @@ textarea:focus {
     justify-content: center;
 }
 
-#sortSelect {
-    background: rgba(255, 255, 255, 0.1);
+#sortSelect,
+#themeSelect {
+    background: var(--control-bg);
     /* border: 1px solid rgba(255, 255, 255, 0.1); */
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     transition: transform 0.2s, box-shadow 0.2s;
@@ -767,14 +799,19 @@ textarea:focus {
     backdrop-filter: blur(10px);
     appearance: none;
     text-align: center;
+    border: 1px solid var(--border-color);
+    /* Ensure border matches theme */
 }
 
-#sortSelect:hover {
-    background: rgba(255, 255, 255, 0.15);
+#sortSelect:hover,
+#themeSelect:hover {
+    background: var(--control-bg);
+    filter: brightness(1.2);
     border-color: var(--accent-color);
 }
 
-#sortSelect option {
+#sortSelect option,
+#themeSelect option {
     background: var(--modal-bg);
     color: var(--text-primary);
     padding: 10px;

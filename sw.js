@@ -1,8 +1,8 @@
-const CACHE_NAME = 'ghost-pioneer-v53';
+const CACHE_NAME = 'ghost-pioneer-v56';
 const ASSETS_TO_CACHE = [
     './index.html',
-    './styles.css?v=7',
-    './script.js?v=7',
+    './styles.css?v=55',
+    './script.js?v=55',
     './manifest.json',
     './icon-192.png',
     './icon-512.png',
